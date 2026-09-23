@@ -116,6 +116,30 @@ class VectorTileLayer extends StatelessWidget {
   /// The maximum zoom of the tile layer, for raster [layerMode] only.
   final double? maximumZoom;
 
+  /// The number of tiles to load outside the visible bounds, for raster
+  /// [layerMode] only. Passed to flutter_map's `TileLayer.panBuffer`.
+  ///
+  /// Buffer tiles make panning smoother but compete with visible tiles for
+  /// rendering. On slow devices a value of 0 can halve the time until the
+  /// visible map is complete, at the cost of tiles appearing at the edges
+  /// while panning.
+  final int panBuffer;
+
+  /// the default [panBuffer], matching flutter_map
+  static const defaultPanBuffer = 1;
+
+  /// The resolution factor used when rasterizing tiles, for raster
+  /// [layerMode] only. A 256 logical pixel tile is rendered to an image of
+  /// `256 * rasterTileScale` pixels.
+  ///
+  /// The default of 2.0 suits high-density displays. On a display with a
+  /// device pixel ratio of 1 a value of 1.0 renders a quarter of the pixels
+  /// and uses a quarter of the memory per tile with no visible difference.
+  final double rasterTileScale;
+
+  /// the default [rasterTileScale]
+  static const defaultRasterTileScale = 2.0;
+
   /// A function that resolves a folder for filesystem caching.
   /// If unspecified, defaults to a subfolder of the temporary directory.
   /// Applications that wish to delete persistent cache data should specify
@@ -142,9 +166,13 @@ class VectorTileLayer extends StatelessWidget {
       this.logCacheStats = false,
       this.layerMode = VectorTileLayerMode.raster,
       this.maximumZoom,
+      this.panBuffer = defaultPanBuffer,
+      this.rasterTileScale = defaultRasterTileScale,
       this.tileDelay = const Duration(milliseconds: 0),
       this.cacheFolder}) {
     assert(concurrency >= 0 && concurrency <= 100);
+    assert(panBuffer >= 0, 'panBuffer must be >= 0');
+    assert(rasterTileScale > 0, 'rasterTileScale must be > 0');
     final providers = theme.tileSources
         .map((source) => tileProviders.tileProviderBySource[source])
         .whereType<VectorTileProvider>();

@@ -11,8 +11,12 @@ class StorageImageCache {
   late final String themeKey;
   final StorageCache delegate;
 
-  StorageImageCache(Theme theme, this.delegate) {
-    themeKey = '${theme.id}-v${theme.version}'
+  /// Part of the key: an image rendered at one scale must not be served
+  /// for another, it would be drawn at the wrong size.
+  final double scale;
+
+  StorageImageCache(Theme theme, this.delegate, this.scale) {
+    themeKey = '${theme.id}-v${theme.version}-s$scale'
         .replaceAll(RegExp(r'[^a-zA-Z0-9.-]'), '-');
   }
 

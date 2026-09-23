@@ -27,7 +27,7 @@ class TileLoader {
   final StorageImageCache _imageCache;
   final TileOffset _tileOffset;
   final int _concurrency;
-  final _scale = 2.0;
+  final double _scale;
   late final ConcurrencyExecutor _jobQueue;
 
   TileLoader(
@@ -38,7 +38,8 @@ class TileLoader {
       this._rasterTileProvider,
       this._tileOffset,
       this._imageCache,
-      this._concurrency) {
+      this._concurrency,
+      this._scale) {
     _themeSources = _theme.tileSources;
     _sourcesKey = _theme.tileSources.toList().sorted().join(',');
     _jobQueue = ConcurrencyExecutor(

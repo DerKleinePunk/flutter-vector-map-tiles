@@ -146,13 +146,15 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
               _executor,
               options.tileOffset,
               options.tileDelay,
-              options.concurrency);
+              options.concurrency,
+              options.rasterTileScale);
       _tileProvider = tileProvider;
       return TileLayer(
           key: Key("${theme.id}_v${theme.version}_VectorTileLayer"),
           maxZoom: maxZoom,
           maxNativeZoom: maxZoom.ceil(),
           evictErrorTileStrategy: EvictErrorTileStrategy.notVisible,
+          panBuffer: options.panBuffer,
           tileProvider: tileProvider);
     }
     final layers = <Widget>[];

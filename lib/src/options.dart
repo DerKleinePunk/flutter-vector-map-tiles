@@ -27,6 +27,8 @@ class VectorTileLayerOptions {
   final TileOffset tileOffset;
   final VectorTileLayerMode layerMode;
   final double? maximumZoom;
+  final int panBuffer;
+  final double rasterTileScale;
   final Future<Directory> Function()? cacheFolder;
 
   VectorTileLayerOptions(vmt.VectorTileLayer layer)
@@ -49,6 +51,8 @@ class VectorTileLayerOptions {
         tileOffset = layer.tileOffset,
         layerMode = layer.layerMode,
         maximumZoom = layer.maximumZoom,
+        panBuffer = layer.panBuffer,
+        rasterTileScale = layer.rasterTileScale,
         cacheFolder = layer.cacheFolder;
 
   bool hasRenderDifferences(VectorTileLayerOptions other) =>
@@ -60,5 +64,6 @@ class VectorTileLayerOptions {
       other.backgroundTheme?.version != backgroundTheme?.version ||
       other.tileOffset != tileOffset ||
       other.layerMode != layerMode ||
-      other.maximumZoom != maximumZoom;
+      other.maximumZoom != maximumZoom ||
+      other.rasterTileScale != rasterTileScale;
 }

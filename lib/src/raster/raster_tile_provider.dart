@@ -22,9 +22,10 @@ TileProvider createRasterTileProvider(
     Executor executor,
     TileOffset tileOffset,
     Duration tileDelay,
-    int concurrency) {
+    int concurrency,
+    double scale) {
   final loader = createTileLoader(theme, sprites, caches, rasterTileProvider,
-      executor, tileOffset, tileDelay, concurrency);
+      executor, tileOffset, tileDelay, concurrency, scale);
   return FutureTileProvider(
       loader: loader.loadTile, themeIdentity: loader.themeIdentity);
 }
@@ -37,7 +38,8 @@ TileLoader createTileLoader(
     Executor executor,
     TileOffset tileOffset,
     Duration tileDelay,
-    int concurrency) {
+    int concurrency,
+    double scale) {
   final tileSupplier = DelayProvider(
           CachesTileProvider(
               caches,
@@ -54,6 +56,7 @@ TileLoader createTileLoader(
       tileSupplier,
       rasterTileProvider,
       tileOffset,
-      StorageImageCache(theme, caches.storageCache),
-      concurrency);
+      StorageImageCache(theme, caches.storageCache, scale),
+      concurrency,
+      scale);
 }
