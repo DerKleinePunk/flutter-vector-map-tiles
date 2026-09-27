@@ -147,7 +147,8 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
               options.tileOffset,
               options.tileDelay,
               options.concurrency,
-              options.rasterTileScale);
+              options.rasterTileScale,
+              options.rasterTilesPerFrame);
       _tileProvider = tileProvider;
       return TileLayer(
           key: Key("${theme.id}_v${theme.version}_VectorTileLayer"),

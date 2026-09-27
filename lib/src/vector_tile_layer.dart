@@ -140,6 +140,20 @@ class VectorTileLayer extends StatelessWidget {
   /// the default [rasterTileScale]
   static const defaultRasterTileScale = 2.0;
 
+  /// How many tiles are handed to the engine for rasterization per frame,
+  /// for raster [layerMode] only. `0` means no limit.
+  ///
+  /// Every new tile is rasterized with `Picture.toImage`. When panning or
+  /// zooming brings in several tiles at once, the engine rasterizes all of
+  /// them before the next frame, and that frame takes as long as all of them
+  /// together. A limit spreads them over several frames: the map fills in a
+  /// little later, but frames keep coming. Tiles keep their order, so the
+  /// ones the map requested first are rasterized first.
+  final int rasterTilesPerFrame;
+
+  /// the default [rasterTilesPerFrame], no limit
+  static const defaultRasterTilesPerFrame = 0;
+
   /// A function that resolves a folder for filesystem caching.
   /// If unspecified, defaults to a subfolder of the temporary directory.
   /// Applications that wish to delete persistent cache data should specify
@@ -168,11 +182,13 @@ class VectorTileLayer extends StatelessWidget {
       this.maximumZoom,
       this.panBuffer = defaultPanBuffer,
       this.rasterTileScale = defaultRasterTileScale,
+      this.rasterTilesPerFrame = defaultRasterTilesPerFrame,
       this.tileDelay = const Duration(milliseconds: 0),
       this.cacheFolder}) {
     assert(concurrency >= 0 && concurrency <= 100);
     assert(panBuffer >= 0, 'panBuffer must be >= 0');
     assert(rasterTileScale > 0, 'rasterTileScale must be > 0');
+    assert(rasterTilesPerFrame >= 0, 'rasterTilesPerFrame must be >= 0');
     final providers = theme.tileSources
         .map((source) => tileProviders.tileProviderBySource[source])
         .whereType<VectorTileProvider>();

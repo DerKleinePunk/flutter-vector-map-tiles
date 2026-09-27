@@ -10,6 +10,7 @@ import '../stream/tile_processor.dart';
 import '../stream/tile_supplier_raster.dart';
 import '../stream/tileset_executor_preprocessor.dart';
 import '../stream/tileset_ui_preprocessor.dart';
+import 'frame_budget.dart';
 import 'future_tile_provider.dart';
 import 'storage_image_cache.dart';
 import 'tile_loader.dart';
@@ -23,9 +24,10 @@ TileProvider createRasterTileProvider(
     TileOffset tileOffset,
     Duration tileDelay,
     int concurrency,
-    double scale) {
+    double scale,
+    int tilesPerFrame) {
   final loader = createTileLoader(theme, sprites, caches, rasterTileProvider,
-      executor, tileOffset, tileDelay, concurrency, scale);
+      executor, tileOffset, tileDelay, concurrency, scale, tilesPerFrame);
   return FutureTileProvider(
       loader: loader.loadTile, themeIdentity: loader.themeIdentity);
 }
@@ -39,7 +41,8 @@ TileLoader createTileLoader(
     TileOffset tileOffset,
     Duration tileDelay,
     int concurrency,
-    double scale) {
+    double scale,
+    int tilesPerFrame) {
   final tileSupplier = DelayProvider(
           CachesTileProvider(
               caches,
@@ -59,5 +62,6 @@ TileLoader createTileLoader(
       StorageImageCache(theme, caches.storageCache, scale,
           enabled: caches.hasCacheableProvider),
       concurrency,
-      scale);
+      scale,
+      FrameBudget(tilesPerFrame));
 }

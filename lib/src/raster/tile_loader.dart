@@ -14,6 +14,7 @@ import '../grid/tile_zoom.dart';
 import '../rendering/tile_renderer.dart';
 import '../stream/tile_supplier.dart';
 import '../stream/tile_supplier_raster.dart';
+import 'frame_budget.dart';
 import 'storage_image_cache.dart';
 
 class TileLoader {
@@ -28,6 +29,7 @@ class TileLoader {
   final TileOffset _tileOffset;
   final int _concurrency;
   final double _scale;
+  final FrameBudget _budget;
   late final ConcurrencyExecutor _jobQueue;
 
   TileLoader(
@@ -39,7 +41,8 @@ class TileLoader {
       this._tileOffset,
       this._imageCache,
       this._concurrency,
-      this._scale) {
+      this._scale,
+      this._budget) {
     _themeSources = _theme.tileSources;
     _sourcesKey = _theme.tileSources.toList().sorted().join(',');
     _jobQueue = ConcurrencyExecutor(
@@ -115,6 +118,11 @@ class TileLoader {
       final size = Size.square(tileSize * _scale);
       final rect = Offset.zero & size;
       if (cancelled()) {
+        throw CancellationException();
+      }
+      await _budget.acquire();
+      if (cancelled()) {
+        _budget.giveBack();
         throw CancellationException();
       }
       final recorder = PictureRecorder();
