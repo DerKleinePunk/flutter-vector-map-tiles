@@ -25,6 +25,9 @@ class FileVectorTileProvider extends VectorTileProvider {
   @override
   final TileOffset tileOffset;
 
+  @override
+  bool get cacheable => false;
+
   FileVectorTileProvider(
       {required this.root,
       required this.extension,

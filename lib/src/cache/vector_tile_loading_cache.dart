@@ -136,11 +136,15 @@ class VectorTileLoadingCache {
 
   Future<Uint8List?> _loadBytes(VectorTileProvider provider, String key,
       TileIdentity tile, bool cachedOnly) async {
-    var bytes = _memoryCache.get(key) ?? await _delegate.retrieve(key);
-    if (bytes == null && !cachedOnly) {
+    final cacheable = provider.cacheable;
+    var bytes = _memoryCache.get(key) ??
+        (cacheable ? await _delegate.retrieve(key) : null);
+    if (bytes == null && (!cachedOnly || !cacheable)) {
       bytes = await provider.provide(tile);
       _memoryCache.put(key, bytes);
-      await _delegate.put(key, bytes);
+      if (cacheable) {
+        await _delegate.put(key, bytes);
+      }
     }
     return bytes;
   }

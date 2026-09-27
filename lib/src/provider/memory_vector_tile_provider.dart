@@ -16,6 +16,8 @@ class MemoryCacheVectorTileProvider extends VectorTileProvider {
   int get minimumZoom => delegate.minimumZoom;
   @override
   TileOffset get tileOffset => delegate.tileOffset;
+  @override
+  bool get cacheable => delegate.cacheable;
 
   MemoryCacheVectorTileProvider(
       {required this.delegate, required int maxSizeBytes}) {

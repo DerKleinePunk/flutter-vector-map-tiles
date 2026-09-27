@@ -29,4 +29,12 @@ abstract class VectorTileProvider {
   TileOffset get tileOffset;
 
   TileProviderType get type => TileProviderType.vector;
+
+  /// whether tiles from this provider go through the file cache. Providers
+  /// that read from local storage (a folder, an MBTiles file) should return
+  /// false: reading the tile again is as cheap as reading the cached copy,
+  /// and the cache has to list its whole folder to keep within its size
+  /// limit. Such providers also count as local for loads that must not go to
+  /// the network.
+  bool get cacheable => true;
 }

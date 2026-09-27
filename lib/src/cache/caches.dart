@@ -19,6 +19,11 @@ class Caches {
   late final MemoryTileDataCache memoryTileDataCache;
   late final TextCache textCache;
   late final List<String> providerSources;
+
+  /// whether any provider of the theme goes through the file cache, see
+  /// [VectorTileProvider.cacheable]. Without one, rendered tile images are
+  /// not written to the file cache either.
+  late final bool hasCacheableProvider;
   late final AtlasImageCache? atlasImageCache;
   late final ImageLoadingCache imageLoadingCache;
 
@@ -43,6 +48,8 @@ class Caches {
     memoryTileDataCache =
         MemoryTileDataCache(maxSize: memoryTileDataCacheMaxSize);
     final tileProviders = _createTileProviders(theme, vectorProviders);
+    hasCacheableProvider = tileProviders.tileProviderBySource.values
+        .any((provider) => provider.cacheable);
     vectorTileCache = VectorTileLoadingCache(
         storageCache,
         memoryVectorTileCache,

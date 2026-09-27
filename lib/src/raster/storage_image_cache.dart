@@ -15,12 +15,20 @@ class StorageImageCache {
   /// for another, it would be drawn at the wrong size.
   final double scale;
 
-  StorageImageCache(Theme theme, this.delegate, this.scale) {
+  /// Off when all sources are local: rendering the tile again is cheaper
+  /// than encoding it as PNG and keeping the cache folder within its limit.
+  final bool enabled;
+
+  StorageImageCache(Theme theme, this.delegate, this.scale,
+      {this.enabled = true}) {
     themeKey = '${theme.id}-v${theme.version}-s$scale'
         .replaceAll(RegExp(r'[^a-zA-Z0-9.-]'), '-');
   }
 
   Future<Image?> retrieve(TileIdentity tile) async {
+    if (!enabled) {
+      return null;
+    }
     String key = _key(tile);
     final cached = await delegate.retrieve(key);
     if (cached != null) {
@@ -40,6 +48,9 @@ class StorageImageCache {
   }
 
   Future<void> put(TileIdentity tile, Image image) async {
+    if (!enabled) {
+      return;
+    }
     final bytes = await image.toByteData(format: ImageByteFormat.png);
     if (bytes != null) {
       await delegate.put(_key(tile), bytes.buffer.asUint8List());

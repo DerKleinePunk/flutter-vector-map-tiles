@@ -56,7 +56,8 @@ TileLoader createTileLoader(
       tileSupplier,
       rasterTileProvider,
       tileOffset,
-      StorageImageCache(theme, caches.storageCache, scale),
+      StorageImageCache(theme, caches.storageCache, scale,
+          enabled: caches.hasCacheableProvider),
       concurrency,
       scale);
 }
