@@ -53,8 +53,9 @@ class TileLoader {
 
   String get themeIdentity => '${_theme.id}/v${_theme.version}/$_sourcesKey';
 
-  Future<ImageInfo> loadTile(TileCoordinates coords, TileLayer options,
-      bool Function() cancelled) async {
+  Future<ImageInfo> loadTile(
+      TileCoordinates coords, TileLayer options, bool Function() cancelled,
+      {bool lowPriority = false}) async {
     final requestedTile =
         TileIdentity(coords.z.toInt(), coords.x.toInt(), coords.y.toInt());
     var requestZoom = requestedTile.z;
@@ -67,17 +68,19 @@ class TileLoader {
       return ImageInfo(image: cached, scale: _scale);
     }
     final job = _TileJob(requestedTile, requestZoom,
-        options.tileDimension.toDouble(), cancelled);
+        options.tileDimension.toDouble(), cancelled, lowPriority);
     return _jobQueue.submit(Job<_TileJob, ImageInfo>(
         'render $requestedTile', _renderJob, job,
         deduplicationKey: 'render $requestedTile $themeIdentity'));
   }
 
   Future<ImageInfo> _renderJob(dynamic job) => _renderTile(
-      job.requestedTile, job.requestZoom, job.tileSize, job.cancelled);
+      job.requestedTile, job.requestZoom, job.tileSize, job.cancelled,
+      lowPriority: job.lowPriority);
 
   Future<ImageInfo> _renderTile(TileIdentity requestedTile, int requestZoom,
-      double tileSize, bool Function() cancelled) async {
+      double tileSize, bool Function() cancelled,
+      {required bool lowPriority}) async {
     if (cancelled()) {
       throw CancellationException();
     }
@@ -120,9 +123,9 @@ class TileLoader {
       if (cancelled()) {
         throw CancellationException();
       }
-      await _budget.acquire();
+      await _budget.acquire(lowPriority: lowPriority);
       if (cancelled()) {
-        _budget.giveBack();
+        _budget.giveBack(lowPriority: lowPriority);
         throw CancellationException();
       }
       final recorder = PictureRecorder();
@@ -166,7 +169,14 @@ class _TileJob {
   final double tileSize;
   final bool Function() cancelled;
 
-  _TileJob(this.requestedTile, this.requestZoom, this.tileSize, this.cancelled);
+  /// Prefetched tiles wait for budget slots no visible tile wanted. A
+  /// visible request for the same tile deduplicates onto the running job
+  /// and inherits its priority; the budget frees up every frame, so that
+  /// costs at most a few frames.
+  final bool lowPriority;
+
+  _TileJob(this.requestedTile, this.requestZoom, this.tileSize, this.cancelled,
+      this.lowPriority);
 }
 
 int _maxOutstandingJobs = 100;

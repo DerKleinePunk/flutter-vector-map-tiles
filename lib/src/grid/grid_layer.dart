@@ -13,6 +13,7 @@ import '../cache/caches.dart';
 import '../vector_tile_controller.dart';
 import '../executors/shared_executor.dart';
 import '../options.dart';
+import '../raster/future_tile_provider.dart';
 import '../raster/raster_tile_provider.dart';
 import '../stream/caches_tile_provider.dart';
 import '../stream/delay_provider.dart';
@@ -150,13 +151,21 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
               options.rasterTileScale,
               options.rasterTilesPerFrame);
       _tileProvider = tileProvider;
-      return TileLayer(
+      final tileLayer = TileLayer(
           key: Key("${theme.id}_v${theme.version}_VectorTileLayer"),
           maxZoom: maxZoom,
           maxNativeZoom: maxZoom.ceil(),
           evictErrorTileStrategy: EvictErrorTileStrategy.notVisible,
           panBuffer: options.panBuffer,
           tileProvider: tileProvider);
+      attachPrefetcher(options.controller, (coords) {
+        // Der Vorab-Weg rendert unter demselben Bild-Schluessel, den eine
+        // sichtbare Anfrage verwendet - sie trifft dann den ImageCache.
+        (tileProvider as FutureTileProvider)
+            .getPrefetchImage(coords, tileLayer)
+            .resolve(const ImageConfiguration());
+      });
+      return tileLayer;
     }
     final layers = <Widget>[];
     if (backgroundTheme != null) {

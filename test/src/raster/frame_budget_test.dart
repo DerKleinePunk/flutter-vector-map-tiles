@@ -61,6 +61,60 @@ void main() {
     expect(await acquireAll(b, 1), [0]);
   });
 
+  test('Vorab wartet auch bei freiem Budget auf das Frame-Ende', () async {
+    final b = budget(2);
+    final granted = <String>[];
+    b.acquire(lowPriority: true).then((_) => granted.add('low'));
+    await Future<void>.delayed(Duration.zero);
+    expect(granted, isEmpty);
+    await frame();
+    expect(granted, ['low']);
+  });
+
+  test('Vorab bekommt nur Plaetze, die kein sichtbarer wollte', () async {
+    final b = budget(2);
+    final granted = <String>[];
+    for (var i = 0; i < 3; i++) {
+      b.acquire().then((_) => granted.add('high$i'));
+    }
+    for (var i = 0; i < 2; i++) {
+      b.acquire(lowPriority: true).then((_) => granted.add('low$i'));
+    }
+    await Future<void>.delayed(Duration.zero);
+    expect(granted, ['high0', 'high1']);
+    await frame();
+    expect(granted, ['high0', 'high1', 'high2', 'low0']);
+    await frame();
+    expect(granted, ['high0', 'high1', 'high2', 'low0', 'low1']);
+  });
+
+  test('ohne Limit tropft Vorab mit einem je Frame durch', () async {
+    final b = budget(0);
+    final granted = <String>[];
+    b.acquire().then((_) => granted.add('high'));
+    b.acquire(lowPriority: true).then((_) => granted.add('low0'));
+    b.acquire(lowPriority: true).then((_) => granted.add('low1'));
+    await Future<void>.delayed(Duration.zero);
+    expect(granted, ['high']);
+    await frame();
+    expect(granted, ['high', 'low0']);
+    await frame();
+    expect(granted, ['high', 'low0', 'low1']);
+  });
+
+  test('giveBack eines unbegrenzten Sichtbaren weckt kein Vorab', () async {
+    final b = budget(0);
+    final granted = <String>[];
+    await b.acquire();
+    b.acquire(lowPriority: true).then((_) => granted.add('low'));
+    await Future<void>.delayed(Duration.zero);
+    b.giveBack(); // der Sichtbare hielt keinen Platz
+    await Future<void>.delayed(Duration.zero);
+    expect(granted, isEmpty);
+    await frame();
+    expect(granted, ['low']);
+  });
+
   test('stops asking for frames once nothing waits', () async {
     final b = budget(1);
     await acquireAll(b, 2);

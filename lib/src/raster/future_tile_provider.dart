@@ -5,10 +5,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_map/flutter_map.dart';
 
+typedef TileImageLoader = Future<ImageInfo> Function(
+    TileCoordinates coords, TileLayer options, bool Function() cancelled,
+    {bool lowPriority});
+
 class FutureTileProvider extends TileProvider {
-  final Future<ImageInfo> Function(
-          TileCoordinates coords, TileLayer options, bool Function() cancelled)
-      loader;
+  final TileImageLoader loader;
 
   final String themeIdentity;
 
@@ -30,6 +32,15 @@ class FutureTileProvider extends TileProvider {
   ) =>
       _FutureImageProvider(
           loader, themeIdentity, coordinates, options, cancelLoading);
+
+  /// Renders the tile with low priority into Flutter's [ImageCache], under
+  /// the same key a visible request would use - a later visible request is
+  /// then a cache hit. See `VectorTileController.prefetch`.
+  ImageProvider getPrefetchImage(
+          TileCoordinates coordinates, TileLayer options) =>
+      _FutureImageProvider(
+          loader, themeIdentity, coordinates, options, Completer().future,
+          lowPriority: true);
 }
 
 /// The key under which a rendered tile is stored in Flutter's [ImageCache].
@@ -62,16 +73,16 @@ class _TileImageKey {
 
 /// Provides a tile image by rendering it with [loader].
 class _FutureImageProvider extends ImageProvider<_TileImageKey> {
-  final Future<ImageInfo> Function(
-          TileCoordinates coords, TileLayer options, bool Function() cancelled)
-      loader;
+  final TileImageLoader loader;
   final String themeIdentity;
   final TileCoordinates coords;
   final TileLayer options;
   final Future<void> cancelLoading;
+  final bool lowPriority;
 
   _FutureImageProvider(this.loader, this.themeIdentity, this.coords,
-      this.options, this.cancelLoading);
+      this.options, this.cancelLoading,
+      {this.lowPriority = false});
 
   @override
   Future<_TileImageKey> obtainKey(ImageConfiguration configuration) =>
@@ -112,7 +123,7 @@ class _FutureImageProvider extends ImageProvider<_TileImageKey> {
   }
 
   Future<ImageInfo> _loadImage(bool Function() cancelled) =>
-      loader(coords, options, cancelled);
+      loader(coords, options, cancelled, lowPriority: lowPriority);
 }
 
 class _CancellationState {

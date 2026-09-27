@@ -10,8 +10,9 @@ import 'package:vector_map_tiles/src/raster/future_tile_provider.dart';
 /// loader would keep the whole tile pipeline (and its geometry) alive for as
 /// long as any tile image was cached.
 void main() {
-  Future<ImageInfo> neverLoads(TileCoordinates coords, TileLayer options,
-          bool Function() cancelled) =>
+  Future<ImageInfo> neverLoads(
+          TileCoordinates coords, TileLayer options, bool Function() cancelled,
+          {bool lowPriority = false}) =>
       Completer<ImageInfo>().future;
 
   FutureTileProvider providerWith(String themeIdentity) =>
