@@ -91,11 +91,9 @@ class TileLoader {
         zoomDetail: requestedTile.z.toDouble(),
         cancelled: cancelled);
     final spriteAtlas = await _spriteAtlas?.call();
-    final tileResponseFuture = _provider.provide(tileRequest);
-    // Nobody listens to it while the raster tiles load; a cancellation in
-    // that time would otherwise surface as an unhandled "Cancelled". The
-    // await below still sees the error.
-    unawaited(tileResponseFuture.then((_) {}, onError: (_) {}));
+    // Awaited only after the raster tiles.
+    final tileResponseFuture =
+        _provider.provide(tileRequest).handledUntilAwaited();
     final rasterTile = await _rasterTileProvider
         .retrieve(requestedTile.normalize(), skipMissing: true);
     try {

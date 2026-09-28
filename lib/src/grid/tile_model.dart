@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:developer';
 import 'dart:ui' as ui;
 
@@ -7,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import 'package:vector_tile_renderer/vector_tile_renderer.dart';
 
 import '../../vector_map_tiles.dart';
+import '../extensions.dart';
 import '../io/io.dart';
 import '../profiler.dart';
 import '../stream/tile_supplier.dart';
@@ -192,10 +192,9 @@ class _VectorTileModelLoader {
     if (!model.disposed) {
       try {
         var request = _newRequest();
-        final loading = model.tileProvider.provide(request);
-        // See TileLoader._renderTile: keeps a cancellation while the raster
-        // tiles load from surfacing as an unhandled "Cancelled".
-        unawaited(loading.then((_) {}, onError: (_) {}));
+        // Awaited only after the raster tiles.
+        final loading =
+            model.tileProvider.provide(request).handledUntilAwaited();
         final rasterTileset = await model.rasterTileProvider
             .retrieve(model.tile, skipMissing: true);
         late final TileResponse tileResponse;
