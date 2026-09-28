@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 import 'dart:ui' as ui;
 
@@ -192,6 +193,9 @@ class _VectorTileModelLoader {
       try {
         var request = _newRequest();
         final loading = model.tileProvider.provide(request);
+        // See TileLoader._renderTile: keeps a cancellation while the raster
+        // tiles load from surfacing as an unhandled "Cancelled".
+        unawaited(loading.then((_) {}, onError: (_) {}));
         final rasterTileset = await model.rasterTileProvider
             .retrieve(model.tile, skipMissing: true);
         late final TileResponse tileResponse;
