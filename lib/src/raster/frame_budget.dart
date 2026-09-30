@@ -8,15 +8,19 @@ import 'package:flutter/scheduler.dart';
 /// order they asked, once the next frame is done. `0` lets everything
 /// through at once.
 ///
-/// Low-priority tiles (prefetch) never take a slot away from a regular
-/// tile: they are granted only slots that a frame left unused, one frame
-/// later. Without a limit they trickle through at one per frame.
+/// Low-priority tiles (prefetch, and tiles rendered again for a new label
+/// rotation while their old image stays on screen) never take a slot away
+/// from a regular tile: they are granted only slots that a frame left
+/// unused, one frame later, and at most one per frame. On the Pi a tile
+/// with labels costs tens of milliseconds to record; after a change of the
+/// label rotation two of them per frame still made frames of 150 ms.
 class FrameBudget {
   final int perFrame;
   final void Function(void Function() callback) _afterNextFrame;
   final _waiting = Queue<Completer<void>>();
   final _waitingLow = Queue<Completer<void>>();
   int _used = 0;
+  int _usedLow = 0;
   bool _resetScheduled = false;
 
   FrameBudget(this.perFrame,
@@ -50,7 +54,8 @@ class FrameBudget {
     }
     if (_waiting.isNotEmpty) {
       _waiting.removeFirst().complete();
-    } else if (_waitingLow.isNotEmpty) {
+    } else if (_waitingLow.isNotEmpty && _usedLow < _lowPerFrame) {
+      _usedLow++;
       _waitingLow.removeFirst().complete();
     } else if (_used > 0) {
       _used--;
@@ -68,15 +73,21 @@ class FrameBudget {
   /// One low-priority tile per frame when no [perFrame] limit is set.
   int get _capacity => perFrame > 0 ? perFrame : 1;
 
+  static const _lowPerFrame = 1;
+
   void _reset() {
     _resetScheduled = false;
     _used = 0;
+    _usedLow = 0;
     while (_used < perFrame && _waiting.isNotEmpty) {
       _used++;
       _waiting.removeFirst().complete();
     }
-    while (_used < _capacity && _waitingLow.isNotEmpty) {
+    while (_used < _capacity &&
+        _usedLow < _lowPerFrame &&
+        _waitingLow.isNotEmpty) {
       _used++;
+      _usedLow++;
       _waitingLow.removeFirst().complete();
     }
     if (_used > 0 || _waitingLow.isNotEmpty) {

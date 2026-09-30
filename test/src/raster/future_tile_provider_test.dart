@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -126,6 +127,88 @@ void main() {
       final zero = await keyFor(provider, aTile, labelRotation: '0.0');
 
       expect(none, equals(zero));
+    });
+  });
+
+  group('tiles rendered again for a new label rotation', () {
+    late List<(TileCoordinates, bool)> loads;
+
+    Future<ImageInfo> recording(
+        TileCoordinates coords, TileLayer options, bool Function() cancelled,
+        {bool lowPriority = false}) {
+      loads.add((coords, lowPriority));
+      return Completer<ImageInfo>().future;
+    }
+
+    setUp(() => loads = []);
+
+    /// Asks [provider] for [coords] at [rotation] and returns whether the
+    /// loader was told low priority.
+    Future<bool> lowPriorityOf(FutureTileProvider provider,
+        TileCoordinates coords, String rotation) async {
+      final image = imageFor(provider, coords, labelRotation: rotation);
+      final key = await image.obtainKey(ImageConfiguration.empty);
+      // ignore: invalid_use_of_protected_member
+      (image as dynamic).loadImage(
+          key,
+          (ui.ImmutableBuffer buffer,
+                  {ui.TargetImageSizeCallback? getTargetSize}) =>
+              throw UnimplementedError());
+      return loads.last.$2;
+    }
+
+    const other = TileCoordinates(2, 2, 3);
+
+    test('the first request at a rotation is regular', () async {
+      final provider =
+          FutureTileProvider(loader: recording, themeIdentity: themeV1);
+
+      expect(await lowPriorityOf(provider, aTile, '0.0'), isFalse);
+      expect(await lowPriorityOf(provider, aTile, '0.0'), isFalse);
+    });
+
+    test('a tile shown at the previous rotation goes behind', () async {
+      final provider =
+          FutureTileProvider(loader: recording, themeIdentity: themeV1);
+      await lowPriorityOf(provider, aTile, '0.0');
+
+      expect(await lowPriorityOf(provider, aTile, '45.0'), isTrue);
+    });
+
+    test('a tile new on screen after the change stays regular', () async {
+      final provider =
+          FutureTileProvider(loader: recording, themeIdentity: themeV1);
+      await lowPriorityOf(provider, aTile, '0.0');
+
+      expect(await lowPriorityOf(provider, other, '45.0'), isFalse);
+    });
+
+    test('only the rotation right before counts', () async {
+      final provider =
+          FutureTileProvider(loader: recording, themeIdentity: themeV1);
+      await lowPriorityOf(provider, aTile, '0.0');
+      await lowPriorityOf(provider, other, '45.0');
+
+      expect(await lowPriorityOf(provider, aTile, '90.0'), isFalse,
+          reason: 'aTile was last asked for two rotations ago');
+      expect(await lowPriorityOf(provider, other, '135.0'), isFalse,
+          reason: 'at 90 other was not asked for');
+    });
+
+    test('without rotated labels nothing goes behind', () async {
+      final provider =
+          FutureTileProvider(loader: recording, themeIdentity: themeV1);
+      for (var i = 0; i < 3; i++) {
+        final image = provider.getImage(aTile, TileLayer());
+        final key = await image.obtainKey(ImageConfiguration.empty);
+        // ignore: invalid_use_of_protected_member
+        (image as dynamic).loadImage(
+            key,
+            (ui.ImmutableBuffer buffer,
+                    {ui.TargetImageSizeCallback? getTargetSize}) =>
+                throw UnimplementedError());
+        expect(loads.last.$2, isFalse);
+      }
     });
   });
 }

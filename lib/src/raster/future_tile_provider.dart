@@ -21,6 +21,11 @@ class FutureTileProvider extends TileProvider {
 
   FutureTileProvider({required this.loader, required this.themeIdentity});
 
+  static const _maxRemembered = 1000;
+  double? _labelRotation;
+  var _requestedAtRotation = <TileCoordinates>{};
+  var _requestedBefore = <TileCoordinates>{};
+
   @override
   ImageProvider getImage(TileCoordinates coordinates, TileLayer options) =>
       getImageWithCancelLoadingSupport(
@@ -33,7 +38,31 @@ class FutureTileProvider extends TileProvider {
     Future<void> cancelLoading,
   ) =>
       _FutureImageProvider(
-          loader, themeIdentity, coordinates, options, cancelLoading);
+          loader, themeIdentity, coordinates, options, cancelLoading,
+          lowPriority: _isRenderedAgain(
+              coordinates, labelRotationOf(options.additionalOptions)));
+
+  /// Whether [coordinates] was asked for at the previous label rotation, so
+  /// that the map shows its old image while this one renders: after a change
+  /// of the rotation the `TileLayer` asks again for every tile it shows.
+  /// Those go behind tiles that are new on screen, one per frame, see
+  /// `FrameBudget`.
+  bool _isRenderedAgain(TileCoordinates coordinates, double labelRotation) {
+    if (labelRotation != _labelRotation) {
+      if (_labelRotation != null) {
+        _requestedBefore = _requestedAtRotation;
+      }
+      _requestedAtRotation = {};
+      _labelRotation = labelRotation;
+    }
+    if (_requestedAtRotation.length >= _maxRemembered) {
+      // Long drives at one rotation: forget the oldest part. Such a tile is
+      // then merely rendered at regular priority.
+      _requestedAtRotation = {};
+    }
+    _requestedAtRotation.add(coordinates);
+    return _requestedBefore.contains(coordinates);
+  }
 
   /// Renders the tile with low priority into Flutter's [ImageCache], under
   /// the same key a visible request would use - a later visible request is

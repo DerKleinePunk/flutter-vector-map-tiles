@@ -88,6 +88,36 @@ void main() {
     expect(granted, ['high0', 'high1', 'high2', 'low0', 'low1']);
   });
 
+  test('nachrangige Kacheln kommen auch bei freiem Budget einzeln', () async {
+    final b = budget(2);
+    final granted = <String>[];
+    for (var i = 0; i < 3; i++) {
+      b.acquire(lowPriority: true).then((_) => granted.add('low$i'));
+    }
+    await Future<void>.delayed(Duration.zero);
+    expect(granted, isEmpty);
+    await frame();
+    expect(granted, ['low0']);
+    await frame();
+    expect(granted, ['low0', 'low1']);
+    await frame();
+    expect(granted, ['low0', 'low1', 'low2']);
+  });
+
+  test('ein zurueckgegebener Platz weckt hoechstens ein Nachrangiges',
+      () async {
+    final b = budget(2);
+    final granted = <String>[];
+    for (var i = 0; i < 3; i++) {
+      b.acquire(lowPriority: true).then((_) => granted.add('low$i'));
+    }
+    await frame();
+    expect(granted, ['low0']);
+    b.giveBack(lowPriority: true);
+    await Future<void>.delayed(Duration.zero);
+    expect(granted, ['low0'], reason: 'this frame had its low slot');
+  });
+
   test('ohne Limit tropft Vorab mit einem je Frame durch', () async {
     final b = budget(0);
     final granted = <String>[];
