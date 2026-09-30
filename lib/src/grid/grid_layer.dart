@@ -64,6 +64,8 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
   Theme? _symbolTheme;
   fm.TileProvider? _tileProvider;
   LabelRotationStepper? _labelRotation;
+  final _labelRotationClock = Stopwatch()..start();
+  Timer? _labelRotationRecheck;
 
   Theme get theme =>
       _theme ??
@@ -105,6 +107,7 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
     _caches.dispose();
     _tileProvider?.dispose();
     _tileProvider = null;
+    _labelRotationRecheck?.cancel();
     releaseSharedExecutor();
   }
 
@@ -154,9 +157,18 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
               options.rasterTileScale,
               options.rasterTilesPerFrame);
       _tileProvider = tileProvider;
-      final labelRotation = (_labelRotation ??= LabelRotationStepper(
-              stepDegrees: options.rasterLabelRotationStep))
-          .update(widget.mapCamera.rotation);
+      final stepper = _labelRotation ??=
+          LabelRotationStepper(stepDegrees: options.rasterLabelRotationStep);
+      final labelRotation = stepper.update(widget.mapCamera.rotation,
+          now: _labelRotationClock.elapsed);
+      _labelRotationRecheck?.cancel();
+      if (stepper.isPending) {
+        // A map that stopped moving builds no more frames; look again once
+        // the new step has been wanted long enough.
+        _labelRotationRecheck = Timer(stepper.dwell, () {
+          if (mounted) setState(() {});
+        });
+      }
       final tileLayer = TileLayer(
           key: Key("${theme.id}_v${theme.version}_VectorTileLayer"),
           maxZoom: maxZoom,
