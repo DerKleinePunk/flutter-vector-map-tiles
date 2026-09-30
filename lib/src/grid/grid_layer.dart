@@ -14,6 +14,7 @@ import '../vector_tile_controller.dart';
 import '../executors/shared_executor.dart';
 import '../options.dart';
 import '../raster/future_tile_provider.dart';
+import '../raster/label_rotation.dart';
 import '../raster/raster_tile_provider.dart';
 import '../stream/caches_tile_provider.dart';
 import '../stream/delay_provider.dart';
@@ -62,6 +63,7 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
   Theme? _theme;
   Theme? _symbolTheme;
   fm.TileProvider? _tileProvider;
+  LabelRotationStepper? _labelRotation;
 
   Theme get theme =>
       _theme ??
@@ -124,6 +126,7 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
         _caches.dispose();
         _tileProvider?.dispose();
         _tileProvider = null;
+        _labelRotation = null;
         _createCaches();
       });
     } else if (newState != previousState) {
@@ -151,12 +154,20 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
               options.rasterTileScale,
               options.rasterTilesPerFrame);
       _tileProvider = tileProvider;
+      final labelRotation = (_labelRotation ??= LabelRotationStepper(
+              stepDegrees: options.rasterLabelRotationStep))
+          .update(widget.mapCamera.rotation);
       final tileLayer = TileLayer(
           key: Key("${theme.id}_v${theme.version}_VectorTileLayer"),
           maxZoom: maxZoom,
           maxNativeZoom: maxZoom.ceil(),
           evictErrorTileStrategy: EvictErrorTileStrategy.notVisible,
           panBuffer: options.panBuffer,
+          // A new value makes the TileLayer reload the visible tiles, each
+          // keeping its old image until the new one is ready.
+          additionalOptions: labelRotation == 0
+              ? const {}
+              : {labelRotationOption: labelRotation.toString()},
           tileProvider: tileProvider);
       attachPrefetcher(options.controller, (coords) {
         // Der Vorab-Weg rendert unter demselben Bild-Schluessel, den eine

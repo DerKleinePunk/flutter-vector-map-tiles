@@ -4,6 +4,7 @@ import 'package:flutter/painting.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:test/test.dart';
 import 'package:vector_map_tiles/src/raster/future_tile_provider.dart';
+import 'package:vector_map_tiles/src/raster/label_rotation.dart';
 
 /// The image cache key must identify a rendering without referencing the tile
 /// loader: Flutter's [ImageCache] retains its keys, so a key that reached the
@@ -19,12 +20,19 @@ void main() {
       FutureTileProvider(loader: neverLoads, themeIdentity: themeIdentity);
 
   ImageProvider imageFor(FutureTileProvider provider, TileCoordinates coords,
-          {int tileDimension = 256}) =>
-      provider.getImage(coords, TileLayer(tileDimension: tileDimension));
+          {int tileDimension = 256, String? labelRotation}) =>
+      provider.getImage(
+          coords,
+          TileLayer(
+              tileDimension: tileDimension,
+              additionalOptions: labelRotation == null
+                  ? const {}
+                  : {labelRotationOption: labelRotation}));
 
   Future<Object> keyFor(FutureTileProvider provider, TileCoordinates coords,
-          {int tileDimension = 256}) =>
-      imageFor(provider, coords, tileDimension: tileDimension)
+          {int tileDimension = 256, String? labelRotation}) =>
+      imageFor(provider, coords,
+              tileDimension: tileDimension, labelRotation: labelRotation)
           .obtainKey(ImageConfiguration.empty);
 
   const aTile = TileCoordinates(1, 2, 3);
@@ -101,6 +109,23 @@ void main() {
       final second = await keyFor(provider, aTile, tileDimension: 512);
 
       expect(first, isNot(equals(second)));
+    });
+    test('a different label rotation produces a different key', () async {
+      final provider = providerWith(themeV1);
+
+      final upright = await keyFor(provider, aTile);
+      final turned = await keyFor(provider, aTile, labelRotation: '180.0');
+
+      expect(upright, isNot(equals(turned)));
+    });
+
+    test('no label rotation and a rotation of 0 share a key', () async {
+      final provider = providerWith(themeV1);
+
+      final none = await keyFor(provider, aTile);
+      final zero = await keyFor(provider, aTile, labelRotation: '0.0');
+
+      expect(none, equals(zero));
     });
   });
 }

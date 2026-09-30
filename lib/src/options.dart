@@ -30,6 +30,7 @@ class VectorTileLayerOptions {
   final int panBuffer;
   final double rasterTileScale;
   final int rasterTilesPerFrame;
+  final double rasterLabelRotationStep;
   final Future<Directory> Function()? cacheFolder;
 
   VectorTileLayerOptions(vmt.VectorTileLayer layer)
@@ -55,6 +56,7 @@ class VectorTileLayerOptions {
         panBuffer = layer.panBuffer,
         rasterTileScale = layer.rasterTileScale,
         rasterTilesPerFrame = layer.rasterTilesPerFrame,
+        rasterLabelRotationStep = layer.rasterLabelRotationStep,
         cacheFolder = layer.cacheFolder;
 
   bool hasRenderDifferences(VectorTileLayerOptions other) =>
@@ -68,5 +70,6 @@ class VectorTileLayerOptions {
       other.layerMode != layerMode ||
       other.maximumZoom != maximumZoom ||
       other.rasterTileScale != rasterTileScale ||
-      other.rasterTilesPerFrame != rasterTilesPerFrame;
+      other.rasterTilesPerFrame != rasterTilesPerFrame ||
+      other.rasterLabelRotationStep != rasterLabelRotationStep;
 }

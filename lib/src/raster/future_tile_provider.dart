@@ -5,6 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter_map/flutter_map.dart';
 
+import 'label_rotation.dart';
+
 typedef TileImageLoader = Future<ImageInfo> Function(
     TileCoordinates coords, TileLayer options, bool Function() cancelled,
     {bool lowPriority});
@@ -47,28 +49,33 @@ class FutureTileProvider extends TileProvider {
 ///
 /// Including [themeIdentity] makes cached images self-invalidating: a theme
 /// change or version bump yields different keys rather than reusing stale
-/// renderings, so no explicit eviction is required.
+/// renderings, so no explicit eviction is required. [labelRotation] does the
+/// same for the rotation the labels were rendered for.
 @immutable
 class _TileImageKey {
   final String themeIdentity;
   final TileCoordinates coords;
   final int tileDimension;
+  final double labelRotation;
 
-  const _TileImageKey(this.themeIdentity, this.coords, this.tileDimension);
+  const _TileImageKey(
+      this.themeIdentity, this.coords, this.tileDimension, this.labelRotation);
 
   @override
   bool operator ==(Object other) =>
       other is _TileImageKey &&
       other.themeIdentity == themeIdentity &&
       other.coords == coords &&
-      other.tileDimension == tileDimension;
+      other.tileDimension == tileDimension &&
+      other.labelRotation == labelRotation;
 
   @override
-  int get hashCode => Object.hash(themeIdentity, coords, tileDimension);
+  int get hashCode =>
+      Object.hash(themeIdentity, coords, tileDimension, labelRotation);
 
   @override
-  String toString() =>
-      '_TileImageKey($themeIdentity, $coords, tileDimension: $tileDimension)';
+  String toString() => '_TileImageKey($themeIdentity, $coords, '
+      'tileDimension: $tileDimension, labelRotation: $labelRotation)';
 }
 
 /// Provides a tile image by rendering it with [loader].
@@ -86,8 +93,8 @@ class _FutureImageProvider extends ImageProvider<_TileImageKey> {
 
   @override
   Future<_TileImageKey> obtainKey(ImageConfiguration configuration) =>
-      SynchronousFuture(
-          _TileImageKey(themeIdentity, coords, options.tileDimension));
+      SynchronousFuture(_TileImageKey(themeIdentity, coords,
+          options.tileDimension, labelRotationOf(options.additionalOptions)));
 
   @override
   ImageStreamCompleter loadBuffer(

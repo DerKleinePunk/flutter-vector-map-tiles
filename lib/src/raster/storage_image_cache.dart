@@ -25,11 +25,11 @@ class StorageImageCache {
         .replaceAll(RegExp(r'[^a-zA-Z0-9.-]'), '-');
   }
 
-  Future<Image?> retrieve(TileIdentity tile) async {
+  Future<Image?> retrieve(TileIdentity tile, {double labelRotation = 0}) async {
     if (!enabled) {
       return null;
     }
-    String key = _key(tile);
+    String key = keyOf(tile, labelRotation: labelRotation);
     final cached = await delegate.retrieve(key);
     if (cached != null) {
       final bytes = Uint8List.fromList(cached);
@@ -47,18 +47,24 @@ class StorageImageCache {
     return null;
   }
 
-  Future<void> put(TileIdentity tile, Image image) async {
+  Future<void> put(TileIdentity tile, Image image,
+      {double labelRotation = 0}) async {
     if (!enabled) {
       return;
     }
     final bytes = await image.toByteData(format: ImageByteFormat.png);
     if (bytes != null) {
-      await delegate.put(_key(tile), bytes.buffer.asUint8List());
+      await delegate.put(keyOf(tile, labelRotation: labelRotation),
+          bytes.buffer.asUint8List());
     }
   }
 
-  String _key(TileIdentity tile) {
-    return '$themeKey-${tile.z}-${tile.x}-${tile.y}.png';
+  /// The file name of [tile]. Tiles rendered for a label rotation get their
+  /// own name; upright ones keep the name they had before rotations existed.
+  String keyOf(TileIdentity tile, {double labelRotation = 0}) {
+    final rotation =
+        labelRotation == 0 ? '' : '-r${labelRotation.toStringAsFixed(1)}';
+    return '$themeKey-${tile.z}-${tile.x}-${tile.y}$rotation.png';
   }
 
   Future _removeQuietly(String key) async {

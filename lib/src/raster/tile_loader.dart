@@ -15,6 +15,7 @@ import '../rendering/tile_renderer.dart';
 import '../stream/tile_supplier.dart';
 import '../stream/tile_supplier_raster.dart';
 import 'frame_budget.dart';
+import 'label_rotation.dart';
 import 'storage_image_cache.dart';
 
 class TileLoader {
@@ -63,24 +64,32 @@ class TileLoader {
       requestZoom = max(
           1, min(requestZoom + _tileOffset.zoomOffset, _provider.maximumZoom));
     }
-    final cached = await _imageCache.retrieve(requestedTile);
+    final labelRotation = labelRotationOf(options.additionalOptions);
+    final cached =
+        await _imageCache.retrieve(requestedTile, labelRotation: labelRotation);
     if (cached != null) {
       return ImageInfo(image: cached, scale: _scale);
     }
-    final job = _TileJob(requestedTile, requestZoom,
-        options.tileDimension.toDouble(), cancelled, lowPriority);
+    final job = _TileJob(
+        requestedTile,
+        requestZoom,
+        options.tileDimension.toDouble(),
+        cancelled,
+        lowPriority,
+        labelRotation);
     return _jobQueue.submit(Job<_TileJob, ImageInfo>(
         'render $requestedTile', _renderJob, job,
-        deduplicationKey: 'render $requestedTile $themeIdentity'));
+        deduplicationKey:
+            'render $requestedTile $themeIdentity r$labelRotation'));
   }
 
   Future<ImageInfo> _renderJob(dynamic job) => _renderTile(
       job.requestedTile, job.requestZoom, job.tileSize, job.cancelled,
-      lowPriority: job.lowPriority);
+      lowPriority: job.lowPriority, labelRotation: job.labelRotation);
 
   Future<ImageInfo> _renderTile(TileIdentity requestedTile, int requestZoom,
       double tileSize, bool Function() cancelled,
-      {required bool lowPriority}) async {
+      {required bool lowPriority, required double labelRotation}) async {
     if (cancelled()) {
       throw CancellationException();
     }
@@ -113,7 +122,10 @@ class TileLoader {
               zoom: requestedTile.z.toDouble(),
               zoomDetail: requestedTile.z.toDouble(),
               zoomScale: 0.0,
-              rotation: 0.0),
+              // The renderer turns labels back by this angle (radians, as
+              // MapCamera.rotationRad), so they stand upright on a map
+              // rotated by about as much.
+              rotation: labelRotation * pi / 180.0),
           translation: translation,
           tileset: tileset,
           rasterTileset: rasterTile,
@@ -139,7 +151,7 @@ class TileLoader {
       try {
         final image =
             await picture.toImage(size.width.toInt(), size.height.toInt());
-        await _cache(translation.original, image);
+        await _cache(translation.original, image, labelRotation);
         return ImageInfo(image: image, scale: _scale);
       } finally {
         // A Picture holds a native display list. Without an explicit dispose it
@@ -153,10 +165,11 @@ class TileLoader {
     }
   }
 
-  Future<void> _cache(TileIdentity tile, Image image) async {
+  Future<void> _cache(
+      TileIdentity tile, Image image, double labelRotation) async {
     Image cloned = image.clone();
     try {
-      await _imageCache.put(tile, cloned);
+      await _imageCache.put(tile, cloned, labelRotation: labelRotation);
     } catch (_) {
       // nothing to do
     } finally {
@@ -177,8 +190,11 @@ class _TileJob {
   /// costs at most a few frames.
   final bool lowPriority;
 
+  /// See [labelRotationOption], in degrees.
+  final double labelRotation;
+
   _TileJob(this.requestedTile, this.requestZoom, this.tileSize, this.cancelled,
-      this.lowPriority);
+      this.lowPriority, this.labelRotation);
 }
 
 int _maxOutstandingJobs = 100;

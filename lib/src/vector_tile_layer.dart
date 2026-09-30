@@ -154,6 +154,23 @@ class VectorTileLayer extends StatelessWidget {
   /// the default [rasterTilesPerFrame], no limit
   static const defaultRasterTilesPerFrame = 0;
 
+  /// Renders the labels of raster tiles for the map rotation rounded to steps
+  /// of this many degrees, for raster [layerMode] only. `0` turns it off.
+  ///
+  /// Raster tiles are rendered once and turn with the map, so on a map
+  /// rotated by 180° (heading south with the map in driving direction) every
+  /// label stands on its head. With a step of 45 the tiles are rendered for
+  /// the nearest multiple of 45°, and no label is ever more than about 32°
+  /// (half a step plus a hysteresis of 10°) off upright.
+  ///
+  /// Driving straight or standing still costs nothing. When the step changes,
+  /// the visible tiles are rendered once more, each keeping its old image
+  /// until the new one is ready; [rasterTilesPerFrame] spreads that out.
+  final double rasterLabelRotationStep;
+
+  /// the default [rasterLabelRotationStep], off
+  static const defaultRasterLabelRotationStep = 0.0;
+
   /// A function that resolves a folder for filesystem caching.
   /// If unspecified, defaults to a subfolder of the temporary directory.
   /// Applications that wish to delete persistent cache data should specify
@@ -183,12 +200,15 @@ class VectorTileLayer extends StatelessWidget {
       this.panBuffer = defaultPanBuffer,
       this.rasterTileScale = defaultRasterTileScale,
       this.rasterTilesPerFrame = defaultRasterTilesPerFrame,
+      this.rasterLabelRotationStep = defaultRasterLabelRotationStep,
       this.tileDelay = const Duration(milliseconds: 0),
       this.cacheFolder}) {
     assert(concurrency >= 0 && concurrency <= 100);
     assert(panBuffer >= 0, 'panBuffer must be >= 0');
     assert(rasterTileScale > 0, 'rasterTileScale must be > 0');
     assert(rasterTilesPerFrame >= 0, 'rasterTilesPerFrame must be >= 0');
+    assert(rasterLabelRotationStep >= 0 && rasterLabelRotationStep <= 180,
+        'rasterLabelRotationStep must be between 0 and 180');
     final providers = theme.tileSources
         .map((source) => tileProviders.tileProviderBySource[source])
         .whereType<VectorTileProvider>();
