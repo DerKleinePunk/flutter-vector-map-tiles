@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:flutter_map/flutter_map.dart';
+
 /// The key under which the label rotation of a raster tile travels in
 /// flutter_map's `TileLayer.additionalOptions`.
 ///
@@ -8,6 +10,15 @@ import 'dart:math';
 /// image until the new one has loaded. The tile provider and loader read the
 /// value from the layer they are handed.
 const labelRotationOption = 'vmtLabelRotation';
+
+/// How the raster `TileLayer` shows its tiles: new tiles fade in, but a tile
+/// that is loaded again replaces its image at once.
+///
+/// flutter_map's default fades a reloaded tile in from opacity 0. After a
+/// change of [labelRotationOption] every visible tile is reloaded; tiles that
+/// are already in the `ImageCache` (a step seen before) all arrive in the
+/// same frame, so the whole map went blank for about a frame and flickered.
+const rasterTileDisplay = TileDisplay.fadeIn(reloadStartOpacity: 1.0);
 
 /// The label rotation in degrees stored in [options] under
 /// [labelRotationOption], `0` if there is none.

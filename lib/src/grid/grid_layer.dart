@@ -175,8 +175,10 @@ class _VectorTileCompositeLayerState extends State<VectorTileCompositeLayer>
           maxNativeZoom: maxZoom.ceil(),
           evictErrorTileStrategy: EvictErrorTileStrategy.notVisible,
           panBuffer: options.panBuffer,
+          tileDisplay: rasterTileDisplay,
           // A new value makes the TileLayer reload the visible tiles, each
-          // keeping its old image until the new one is ready.
+          // keeping its old image until the new one is ready, see
+          // rasterTileDisplay.
           additionalOptions: labelRotation == 0
               ? const {}
               : {labelRotationOption: labelRotation.toString()},
